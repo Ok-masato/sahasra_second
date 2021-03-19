@@ -1,0 +1,18 @@
+{
+    "name": "dnd-app",
+    "version": "1.0.0",
+    "description": "dnd app",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron ."
+    },
+    "devDependencies": {
+        "electron": "^9.1.0",
+        "electron-packager": "^15.0.0"
+    },
+    "dependencies": {
+        "bootstrap": "^4.5.0",
+        "vue": "^2.6.11",
+        "vuedraggable": "^2.24.0"
+    }
+}

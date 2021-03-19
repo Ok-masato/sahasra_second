@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Smart project Difference detection Sysyem</title>
+    <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <style>
+
+      body {
+        padding: 15px 0;
+      }
+
+      #images {
+        border: 5px solid #eee;
+        border-radius: 10px;
+        margin-top: 20px;
+        padding: 15px;
+      }
+
+      #images img {
+        height: 70px;
+      }
+
+      .image-container {
+        width: 15%;
+        height: 150px;
+        margin: 5px;
+        text-align: center;
+        float:left;
+      }
+
+      .image-container a {
+        color: #222;
+        text-decoration: none;
+      }
+
+      .image-container img {
+        margin-bottom: 5px;
+      }
+
+      .filename {
+        font-size: 80%;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="container">
+      <p class="bg-dark text-light">Back images</p>
+      <div id="images" 
+           @drop="dropList($event, 'B')"
+           @dragover.prevent
+           @dragenter.prevent
+      >
+        <div class="image-container" 
+             v-for="BackImage in BackImages"
+             draggable 
+             @dragstart="dragList($event,BackImage.path)"
+        >
+          <a href="#" @click.prevent="openImage(BackImage)">
+            <img :src="BackImage.path">
+            <div class="filename" v-text="BackImage.name"></div>
+          </a>
+        </div>
+        <div class="clearfix"></div>
+      </div>
+    <br/>
+      <p class="text-white bg-dark">Object images</p>
+        <div id="images" 
+             @drop="dropList($event, 'O')"
+             @dragover.prevent
+             @dragenter.prevent
+        >
+        <div class="image-container" 
+             v-for="ObjImage in ObjImages"
+             draggable 
+             @dragstart="dragList($event,ObjImage.path)"
+        >
+          <a href="#" @click.prevent="openImage(ObjImage)">
+            <img :src="ObjImage.path">
+            <div class="filename" v-text="ObjImage.name"></div>
+          </a>
+        </div>
+        <div class="clearfix"></div>
+      </div>
+    </div>
+
+    <script>
+      require('./renderer.js')
+    </script>
+    <script src="./node_modules/vue/dist/vue.min.js"></script>
+    <script>
+      const electron = require('electron');
+      const BrowserWindow = electron.remote.BrowserWindow;
+      const fs = require('fs')
+      const BackPath = require('path')
+      const ObjPath = require('path')
+
+      new Vue({
+        el: '#app',
+        data: {
+          BackPath: '',
+          BackImages: [],
+          BackFolders: [],
+          ObjPath: '',
+          ObjImages: [],
+          ObjFolders: [],
+        },
+        methods: {
+          getHomePath(target) {
+            const key = (process.platform == 'win32') ? 'USERPROFILE' : 'HOME'
+            console.log(process.env[key])
+            return process.env[key]+"\\PycharmProjects\\Smart\\"+target;
+          },
+          loadFolder(Path, Images, Folders) {
+            if(fs.existsSync(Path)) {
+              const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bpm', '.webp']
+              const files = fs.readdirSync(Path)
+                              .map(name => {
+                                const stat = fs.statSync(Path +'/'+ name)
+                                const extension = BackPath.extname(name)
+                                return {
+                                  name: name,
+                                  extension: extension,
+                                  path: Path +'/'+ name,
+                                  type: stat.isFile() ? 'file' : 'folder',
+                                  time: stat.mtime.getTime()
+                                }
+                              })
+                              .filter(file => {
+                                if(file.type == 'file') {
+                                  return (extensions.includes(file.extension))
+                                }
+                                return (!file.name.startsWith('.'))
+                              })
+
+              for(file of files) {
+                if(file.type == 'folder') {
+                    Folders.push(file)
+
+                } else {
+                    Images.push(file)
+                }
+
+              }
+
+            }
+            console.log(Images);
+
+          },
+          reset(){
+            this.BackImages.splice(-this.BackImages.length);
+            this.BackFolders.splice(-this.BackFolders.length);
+            this.ObjImages.splice(-this.ObjImages.length);
+            this.ObjFolders.splice(-this.ObjFolders.length);
+          },
+          openImage(image) {
+            const viewer = new BrowserWindow({
+              width: 300,
+              height: 300,
+              center: true,
+              autoHideMenuBar: true,
+            })
+            viewer.loadFile(image.path)
+          },
+          dragList(event, dragId){
+            event.dataTransfer.effectAllowed = 'move'
+            event.dataTransfer.dropEffect = 'move'
+            event.dataTransfer.setData('list-id',dragId)
+          },
+          dropList(event, dropCategory){
+            const dragId = event.dataTransfer.getData('list-id')
+            //const dragList = this.lists.find(list => list.id == dragId)
+            console.log("dragId", dragId)
+            console.log("dropCategory", dropCategory)
+
+            //ドロップ先のカテゴリー
+            if(dropCategory=='B'){
+              var fromObj = this.ObjImages.find(list => list.path == dragId)
+              var fromBack = this.BackImages.find(list => list.path == dragId)
+
+              if(fromObj){
+                console.log("from_Obj", fromObj)
+                const fs = require('fs');
+
+                // 正規表現でファイル名
+                filename = dragId.match(".+/(.+?)([\?#;].*)?$")[1];
+                // from, to
+                fs.rename(dragId, this.BackPath+"\\"+filename, (err) => {
+                    if (err) throw err;
+                    console.log('ファイルを移動しました(',this.BackPath+"\\"+filename+')');
+                });
+                // うまくロードできなくなるときがあるため、仕方なくリロード
+                //this.reset()
+                //this.loadFolder(this.ObjPath, this.ObjImages, this.ObjFolders)
+                //this.loadFolder(this.BackPath, this.BackImages, this.BackFolders)
+                location.reload();
+              }else{
+                console.log("移動なし")
+              }
+            }
+            else if(dropCategory=='O'){
+              var fromObj = this.ObjImages.find(list => list.path == dragId)
+              var fromBack = this.BackImages.find(list => list.path == dragId)
+
+              if(fromBack){
+                console.log("from_Back", fromBack)
+                const fs = require('fs');
+
+                // 正規表現でファイル名、拡張子を取得
+                filename = dragId.match(".+/(.+?)([\?#;].*)?$")[1];
+                // from, to
+                fs.rename(dragId, this.ObjPath+"\\"+filename, (err) => {
+                    if (err) throw err;
+                    console.log('ファイルを移動しました(',this.ObjPath+"\\"+filename+')');
+                });
+                // うまくロードできなくなるときがあるため、仕方なくリロード
+                //this.reset()
+                //this.loadFolder(this.ObjPath, this.ObjImages, this.ObjFolders)
+                //this.loadFolder(this.BackPath, this.BackImages, this.BackFolders)
+                location.reload();
+              }else{
+                console.log("移動なし")
+              }
+            }
+          },
+          decision() {
+            location.reload();
+          }
+        },
+        computed: {
+        },
+        watch: {
+          BackPath() {
+            this.loadFolder(this.BackPath, this.BackImages, this.BackFolders)
+          },
+          ObjPath() {
+            this.loadFolder(this.ObjPath, this.ObjImages, this.ObjFolders)
+          }
+        },
+        mounted() {
+          this.BackPath = this.getHomePath("back_img")
+          this.ObjPath = this.getHomePath("obj_img")
+        }
+      })
+
+    </script>
+  </body>
+</head>
+</html>
