@@ -46,27 +46,50 @@ back_flag = False
 human_flag = False
 camera_scale = 1.
 
+# 複数カメラ用
+camera_num = 1
+flag = True
+captures = []
+
 class App:
     def __init__(self, window, window_title,
-                 input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, img_num, back_flag):
+                 input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, img_num, back_flag, camera_num, captures):
 
         self.window = window
         self.window.title(window_title)
 
-        self.vcap = cv2.VideoCapture(0)
-        self.width = self.vcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.vcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        while (flag):
+            self.vcap_0 = cv2.VideoCapture(camera_num)
+            self.width_0 = self.vcap_0.get(cv2.CAP_PROP_FRAME_WIDTH)
+            self.height_0 = self.vcap_0.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+            if flag:
+                camera_num += 1
+                captures.append(self.vcap_0)
 
         self.yolo = human_detector.YOLO()
         self.human_exist = [False, False, False, False]
 
         # カメラモジュールの映像を表示するキャンバスを用意する
-        self.canvas = Canvas(self.window, width=self.width, height=self.height)
-        self.canvas.grid(columnspan=3, column=0, row=0, sticky=W+E)
+        while (True):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord(' '):
+                break
+
+            for camera_num, vcap_0 in enumerate(captures):
+                # ret, frame = vcap_0.read()
+                # cv2.imshow('frame' + str(camera_num), frame)
+                self.canvas_0 = Canvas(self.window, width=self.width_0, height=self.height_0)
+                self.canvas_0.grid(columnspan=3, column=0, row=0, sticky=W + E)
+
+        # vcap_0.release()
+        # cv2.destroyAllWindows()
+        # self.canvas_1 = Canvas(self.window, width=self.width_1, height=self.height_1)
+        # self.canvas_1.grid(columnspan=3, column=10, row=0, sticky=W + E)
 
         self.img_num = img_num
         self.input_dir = input_dir
-        self. back_flag = back_flag
+        self.back_flag = back_flag
         self.trace_data = trace_data
 
         self.dc = DiffCreate.DiffCreate(input_dir, diff_dir, out_dir,
@@ -93,6 +116,8 @@ class App:
 
         self.window.mainloop()
 
+
+
     def check_capture(self):
         if (self.human_exist[0] == True) and (self.human_exist[1] == False) and (self.human_exist[2] == False) \
                 and (self.human_exist[3] == False):
@@ -103,32 +128,49 @@ class App:
     # キャンバスに表示されているカメラモジュールの映像を
     # 15ミリ秒ごとに更新する
     def update(self):
-        ret, image = self.vcap.read()
+        ret_0, image_0 = self.vcap_0.read()
         # 保存用のイメージ
-        tmp_image = image
-        h, w = image.shape[:2]
+        tmp_image_0 = image_0
+        h, w = image_0.shape[:2]
         rh = int(h * camera_scale)
         rw = int(w * camera_scale)
-        image = cv2.resize(image, (rw, rh))
-        image = image[:, :, (2, 1, 0)]
-        image = Image.fromarray(image)
-        r_image, human_flag = self.yolo.detect_image(image)
+        image_0 = cv2.resize(image_0, (rw, rh))
+        image_0 = image_0[:, :, (2, 1, 0)]
+        image_0 = Image.fromarray(image_0)
+        r_image_0, human_flag = self.yolo.detect_image(image_0)
+
+        # ret_1, image_1 = self.vcap_1.read()
+        # # 保存用のイメージ
+        # tmp_image_1 = image_1
+        # h, w = image_1.shape[:2]
+        # rh = int(h * camera_scale)
+        # rw = int(w * camera_scale)
+        # image_1 = cv2.resize(image_1, (rw, rh))
+        # image_1 = image_1[:, :, (2, 1, 0)]
+        # image_1 = Image.fromarray(image_1)
+        # r_image_1, human_flag = self.yolo.detect_image(image_1)
+
         del self.human_exist[0]
         self.human_exist.append(human_flag)
         print(self.human_exist)
 
         if self.back_flag and self.check_capture():
             path = self.input_dir + str(self.img_num) + ".jpg"
-            cv2.imwrite(path, tmp_image)
+
+            cv2.imwrite(path, tmp_image_0)
+            # cv2.imwrite(path, tmp_image_1)
+
             done = self.dc.detect_contour()
             if done:
                 self.img_num = self.img_num + 1
                 self.dc.plus_num()
             print("Success this capture num ({}).".format(self.img_num))
 
-        out_img = np.array(r_image)
+        out_img = np.array(r_image_0)
         self.photo = ImageTk.PhotoImage(image=Image.fromarray(out_img))
-        self.canvas.create_image(0, 0, image=self.photo, anchor=NW)
+        self.canvas_0.create_image(0, 0, image=self.photo, anchor=NW)
+        # self.canvas_1.create_image(0, 0, image=self.photo, anchor=NW)
+
         self.window.after(self.delay, self.update)
 
     # リフレッシュボタンの処理
@@ -140,13 +182,13 @@ class App:
     def destructor(self):
         print("Quit.")
         self.window.destroy()
-        self.vcap.release()
+        self.vcap_0.release()
         self.yolo.close_session()
 
     # 撮影ボタンの処理
     def capture(self):
         path = self.input_dir + str(self.img_num) + ".jpg"
-        _, frame = self.vcap.read()
+        _, frame = self.vcap_0.read()
 
         if args.mode == "first":
             if not self.back_flag:
@@ -170,4 +212,4 @@ class App:
             pass
 
 
-App(Tk(), "Sahasra Difference Detector ", input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, img_num, back_flag)
+App(Tk(), "Sahasra Difference Detector ", input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, img_num, back_flag, camera_num, captures)
