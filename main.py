@@ -54,9 +54,8 @@ captures = []
 
 
 class App:
-    def __init__(self, window, window_title,
-                 input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, img_num, img_num2, back_flag,
-                 camera_num, captures):
+    def __init__(self, window, window_title,input_dir, diff_dir, out_dir, obj_dir,
+                 back_img_dir, obj_db, trace_data, img_num, img_num2, back_flag, captures):
 
         self.window = window
         self.window.title(window_title)
@@ -144,7 +143,7 @@ class App:
             path = self.input_dir + str(self.img_num) + ".jpg"
             path2 = self.input_dir + str(self.img_num2) + "02.jpg"
 
-            cv2.imwrite(path, tmp_image)
+            cv2.imwrite(path, tmp_image)    # 画像ファイル(input_dir)に保存
             cv2.imwrite(path2, tmp_image2)
 
             done = self.dc.detect_contour()
@@ -186,7 +185,7 @@ class App:
         if args.mode == "first":
             if not self.back_flag:
                 self.back_flag = True
-                cv2.imwrite(path, frame)
+                cv2.imwrite(path, frame)    # 画像ファイル(input_dir)に保存
                 cv2.imwrite(path2, frame2)
                 self.img_num = self.img_num + 1
                 self.img_num2 = self.img_num2 + 1
@@ -196,7 +195,7 @@ class App:
 
             # add
             else:
-                cv2.imwrite(path, frame)
+                cv2.imwrite(path, frame)    # 画像ファイル(input_dir)に保存
                 cv2.imwrite(path2, frame2)
                 done = self.dc.detect_contour()
                 if done:
@@ -210,4 +209,4 @@ class App:
 
 
 App(Tk(), "Sahasra Difference Detector ", input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data,
-    img_num, img_num2, back_flag, camera_num, captures)
+    img_num, img_num2, back_flag, captures)
