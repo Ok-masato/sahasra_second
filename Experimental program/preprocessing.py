@@ -4,7 +4,7 @@ import os
 
 pre = "./preprocessing/*.jpg"
 out = "./target"
-name = "4"
+name = "3"
 
 for i, path in enumerate(glob.glob(pre)):
     print("before:", path)

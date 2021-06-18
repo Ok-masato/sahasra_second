@@ -1,3 +1,4 @@
+# conda install -c conda-forge opencv
 import cv2
 import argparse
 from libs import DiffCreate, RefleshFolder
@@ -5,6 +6,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import human_detector
 import numpy as np
+import os
 
 '''
 
@@ -32,11 +34,33 @@ parser.add_argument(
 args = parser.parse_args()
 
 input_dir = "./img/"
+if not os.path.exists(input_dir):
+    os.mkdir(input_dir)
+
 diff_dir = "./Diff_img/"
+if not os.path.exists(diff_dir):
+    os.mkdir(diff_dir)
+
 out_dir = "./Diff_detect_img/"
+if not os.path.exists(out_dir):
+    os.mkdir(out_dir)
+
 obj_dir = "./obj_img/"
+if not os.path.exists(obj_dir):
+    os.mkdir(obj_dir)
+
 back_img_dir = "./back_img/"
+if not os.path.exists(back_img_dir):
+    os.mkdir(back_img_dir)
+
+obj_db = "./obj_db/"
+if not os.path.exists(obj_db):
+    os.mkdir(obj_db)
+
 obj_db = "./obj_db/target/"
+if not os.path.exists(obj_db):
+    os.mkdir(obj_db)
+
 trace_data = "./train_data/trace.txt"
 
 img_num = 0
@@ -54,7 +78,7 @@ captures = []
 
 
 class App:
-    def __init__(self, window, window_title,input_dir, diff_dir, out_dir, obj_dir,
+    def __init__(self, window, window_title, input_dir, diff_dir, out_dir, obj_dir,
                  back_img_dir, obj_db, trace_data, img_num, img_num2, back_flag, captures):
 
         self.window = window
@@ -83,7 +107,9 @@ class App:
         self.trace_data = trace_data
 
         self.dc = DiffCreate.DiffCreate(input_dir, diff_dir, out_dir,
-                                        obj_dir, back_img_dir, obj_db, trace_data, img_num)
+                                        obj_dir, back_img_dir, obj_db, trace_data, img_num, 1)
+        self.dc2 = DiffCreate.DiffCreate(input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data,
+                                         img_num, 2)
 
         # 撮影ボタン
         self.cap_btn = Button(self.window, text="Capture")
@@ -132,6 +158,7 @@ class App:
         image2 = cv2.resize(image2, (rw, rh))
         image2 = image2[:, :, (2, 1, 0)]
         image2 = Image.fromarray(image2)
+
         r_image, human_flag = self.yolo.detect_image(image)
         r_image2, human_flag2 = self.yolo.detect_image(image2)
 
@@ -141,16 +168,21 @@ class App:
 
         if self.back_flag and self.check_capture():
             path = self.input_dir + str(self.img_num) + ".jpg"
-            path2 = self.input_dir + str(self.img_num2) + "02.jpg"
+            path2 = self.input_dir + str(self.img_num2) + "-2.jpg"
 
-            cv2.imwrite(path, tmp_image)    # 画像ファイル(input_dir)に保存
+            cv2.imwrite(path, tmp_image)  # 画像ファイル(input_dir)に保存
             cv2.imwrite(path2, tmp_image2)
 
             done = self.dc.detect_contour()
+            done2 = self.dc2.detect_contour()
             if done:
                 self.img_num = self.img_num + 1
-                self.img_num2 = self.img_num2 + 1
                 self.dc.plus_num()
+
+            if done2:
+                self.img_num2 = self.img_num2 + 1
+                self.dc2.plus_num()
+
             print("Success this capture num ({}).".format(self.img_num))
 
         out_img = np.array(r_image)
@@ -177,7 +209,7 @@ class App:
     # 撮影ボタンの処理
     def capture(self):
         path = self.input_dir + str(self.img_num) + ".jpg"
-        path2 = self.input_dir + str(self.img_num2) + "02.jpg"
+        path2 = self.input_dir + str(self.img_num2) + "-2.jpg"
 
         _, frame = self.vcap.read()
         _, frame2 = self.vcap2.read()
@@ -185,23 +217,28 @@ class App:
         if args.mode == "first":
             if not self.back_flag:
                 self.back_flag = True
-                cv2.imwrite(path, frame)    # 画像ファイル(input_dir)に保存
+                cv2.imwrite(path, frame)  # 画像ファイル(input_dir)に保存
                 cv2.imwrite(path2, frame2)
                 self.img_num = self.img_num + 1
                 self.img_num2 = self.img_num2 + 1
                 self.dc.plus_num()
+                self.dc2.plus_num()
                 self.ref_btn['state'] = DISABLED
                 print("Success capture(back).")
 
             # add
             else:
-                cv2.imwrite(path, frame)    # 画像ファイル(input_dir)に保存
+                cv2.imwrite(path, frame)  # 画像ファイル(input_dir)に保存
                 cv2.imwrite(path2, frame2)
                 done = self.dc.detect_contour()
+                done2 = self.dc2.detect_contour()
                 if done:
                     self.img_num = self.img_num + 1
-                    self.img_num2 = self.img_num2 + 1
                     self.dc.plus_num()
+
+                if done2:
+                    self.img_num2 = self.img_num2 + 1
+                    self.dc2.plus_num()
                 print("Success this capture num ({}).".format(self.img_num))
 
         elif args.mode == "load":

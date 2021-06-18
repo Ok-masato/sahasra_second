@@ -129,6 +129,8 @@ if __name__ == "__main__":
 
     # 分類対象のフォルダ
     target = "./target"
+    # 無い場合はとってくる
+
     # 分類クラスのフォルダ名
     result_folder = "/class_"
     # 分類クラスのフォルダの頭
@@ -152,6 +154,7 @@ if __name__ == "__main__":
     for i in range(ex_num):
         if i == 0:
             ac = AutomaticClassification(target, output_path, result_folder, model_name)
+            # shutil.copytree("../obj_db/target", "./target")
         else:
             ac.update_paramater(target, output_path, result_folder)
         ac.import_img()

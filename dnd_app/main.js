@@ -6,7 +6,7 @@ const { app, BrowserWindow } = require('electron')
 let mainWindow
 
 function createWindow() {
-    // Create the browser window.
+    // ウィンドウのサイズ指定
     mainWindow = new BrowserWindow({
         webPreferences: {
             nodeIntegration: true

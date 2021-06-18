@@ -5,7 +5,7 @@ import uuid
 
 
 class DiffCreate:
-    def __init__(self, input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db,  trace_data, num):
+    def __init__(self, input_dir, diff_dir, out_dir, obj_dir, back_img_dir, obj_db, trace_data, num, camera):
         self.input_dir = input_dir
         self.diff_dir = diff_dir
         self.out_dir = out_dir
@@ -13,6 +13,7 @@ class DiffCreate:
         self.back_img_dir = back_img_dir
         self.obj_db = obj_db
         self.num = num
+        self.camera = camera
         self.trace_data = trace_data
         self.objects = []
 
@@ -75,7 +76,12 @@ class DiffCreate:
         print(bbox)
         for index in range(len(check)):
             if check[index]:
-                obj_save_path = self.obj_dir + str(self.num) + "-" + str(self.num - 1) + "-" + str(index) + ".jpg"
+                if self.camera > 1:
+                    obj_save_path = self.obj_dir + str(self.num) + "-" + str(self.num - 1) + "-" \
+                                    + str(index) + "-" + str(self.camera) + ".jpg"
+                else:
+                    obj_save_path = self.obj_dir + str(self.num) + "-" + str(self.num - 1) + "-" + str(index) + ".jpg"
+
                 path_list.append([bbox[index][0], bbox[index][1], bbox[index][2], bbox[index][3], obj_save_path])
         return path_list
 
@@ -115,11 +121,17 @@ class DiffCreate:
 
     # 輪郭検出
     def detect_contour(self):
-
-        back_img_path = self.input_dir + str(self.num - 1) + ".jpg"
+        if self.camera > 1:
+            back_img_path = self.input_dir + str(self.num - 1) + "-" + str(self.camera) + ".jpg"
+        else:
+            back_img_path = self.input_dir + str(self.num - 1) + ".jpg"
         back_img = cv2.imread(back_img_path)
 
-        obj_img_path = self.input_dir + str(self.num) + ".jpg"
+        if self.camera > 1:
+            obj_img_path = self.input_dir + str(self.num) + "-" + str(self.camera) + ".jpg"
+        else:
+            obj_img_path = self.input_dir + str(self.num) + ".jpg"
+
         print("img_num : ", self.num)
         print("back_img : ", back_img_path)
         obj_img = cv2.imread(obj_img_path, 1)
@@ -146,7 +158,11 @@ class DiffCreate:
         ret2, to2img = cv2.threshold(diff_img, 50, 255, cv2.THRESH_BINARY)
 
         # 検出画像
-        bg_diff_path = self.diff_dir + str(self.num) + "-" + str(self.num-1) + '.jpg'
+        if self.camera > 1:
+            bg_diff_path = self.diff_dir + str(self.num) + "-" + str(self.num - 1) + "-" + str(self.camera) + ".jpg"
+        else:
+            bg_diff_path = self.diff_dir + str(self.num) + "-" + str(self.num - 1) + '.jpg'
+
         cv2.imwrite(bg_diff_path, to2img)
 
         # デバッグ用
@@ -160,7 +176,10 @@ class DiffCreate:
         img_close = cv2.morphologyEx(img, cv2.MORPH_OPEN, se)
         img_close = cv2.morphologyEx(img, cv2.MORPH_CLOSE, se)
 
-        morph_close_path = "./morph_close/" + str(self.num) + "-" + str(self.num-1) + '.jpg'
+        if self.camera > 1:
+            morph_close_path = "./morph_close/" + str(self.num) + "-" + str(self.num - 1) + "-" + str(self.camera) + ".jpg"
+        else:
+            morph_close_path = "./morph_close/" + str(self.num) + "-" + str(self.num - 1) + '.jpg'
         cv2.imwrite(morph_close_path, img_close)
 
         # detect contour
@@ -212,7 +231,7 @@ class DiffCreate:
                             h = bbox_list[j][3] - bbox_list[j][1]
                             w = bbox_list[j][2] - bbox_list[j][0]
                             rec = h * w
-                            if (bbox_list[k][0] <= bbox_list[j][0]) and (bbox_list[j][0] <= bbox_list[k][2])\
+                            if (bbox_list[k][0] <= bbox_list[j][0]) and (bbox_list[j][0] <= bbox_list[k][2]) \
                                     and ((bbox_list[k][1] <= bbox_list[j][1]) and (bbox_list[j][1] <= bbox_list[k][3])):
                                 h1 = bbox_list[j][3] - bbox_list[j][1]
                                 w1 = bbox_list[k][2] - bbox_list[j][0]
@@ -222,7 +241,7 @@ class DiffCreate:
                                 else:
                                     bbox_check_list[j] = True
 
-                            if ((bbox_list[k][0] <= bbox_list[j][2]) and (bbox_list[j][2] <= bbox_list[k][2]))\
+                            if ((bbox_list[k][0] <= bbox_list[j][2]) and (bbox_list[j][2] <= bbox_list[k][2])) \
                                     and ((bbox_list[k][1] <= bbox_list[j][1]) and (bbox_list[j][1] <= bbox_list[k][3])):
                                 h2 = bbox_list[j][3] - bbox_list[j][1]
                                 w2 = bbox_list[j][2] - bbox_list[k][0]
@@ -242,7 +261,7 @@ class DiffCreate:
                                 else:
                                     bbox_check_list[j] = True
 
-                            if ((bbox_list[k][1] <= bbox_list[j][3]) and (bbox_list[j][3] <= bbox_list[k][3]))\
+                            if ((bbox_list[k][1] <= bbox_list[j][3]) and (bbox_list[j][3] <= bbox_list[k][3])) \
                                     and ((bbox_list[k][0] <= bbox_list[j][1]) and (bbox_list[j][1] <= bbox_list[k][2])):
                                 h4 = bbox_list[j][3] - bbox_list[k][1]
                                 w4 = bbox_list[j][2] - bbox_list[j][0]
@@ -262,16 +281,30 @@ class DiffCreate:
                 for index in range(len(bbox_check_list)):
                     if bbox_check_list[index]:
                         # 物の画像をトリミングして保存する
-                        tmp_path = "obj-{}-{}-{}.jpg".format(str(self.num), str(self.num - 1), str(index))
+                        if self.camera > 1:
+                            tmp_path = ("obj-{}-{}-{}-" + str(self.camera) + ".jpg")\
+                                .format(str(self.num), str(self.num - 1), str(index))
+                        else:
+                            tmp_path = "obj-{}-{}-{}.jpg".format(str(self.num), str(self.num - 1), str(index))
+
                         self.trim_img_save(tmp_path, obj_img, bbox_list[index], "o")
+
                         # 差分の裏側も保存する
-                        tmp_path = "back-{}-{}-{}.jpg".format(str(self.num), str(self.num - 1), str(index))
+                        if self.camera > 1:
+                            tmp_path = ("back-{}-{}-{}-" + str(self.camera) + ".jpg")\
+                                .format(str(self.num), str(self.num - 1), str(index))
+                        else:
+                            tmp_path = "back-{}-{}-{}.jpg".format(str(self.num), str(self.num - 1), str(index))
+
                         self.trim_img_save(tmp_path, back_img, bbox_list[index], "b")
 
                         # 物の画像をトリミングして類似画像の検索、DBへ保存
                         u4 = str(uuid.uuid4())
                         # print(u4)
-                        db_tmp = "{}-{}_{}.jpg".format(str(self.num), str(self.num - 1), u4)
+                        if self.camera > 1:
+                            db_tmp = ("{}-{}_{}-" + str(self.camera) + ".jpg").format(str(self.num), str(self.num - 1), u4)
+                        else:
+                            db_tmp = "{}-{}_{}.jpg".format(str(self.num), str(self.num - 1), u4)
 
                         self.obj_db_save(db_tmp, obj_img, bbox_list[index])
                         self.trace_save(db_tmp, bbox_list[index])
@@ -286,7 +319,11 @@ class DiffCreate:
                                       (bbox_list[index][2], bbox_list[index][3]), (0, 255, 0), 3)
                         # center_x, center_y = self.center_position(bbox_list[index])
                         # cv2.circle(obj_img, (center_x, center_y), 10, 255, -1)
-                cv2.imwrite(self.out_dir + str(self.num) + "-" + str(self.num-1) + '.jpg', obj_img)
+                if self.camera > 1:
+                    cv2.imwrite(self.out_dir + str(self.num) + "-" + str(self.num - 1) + "-" + str(self.camera) + '.jpg', obj_img)
+                else:
+                    cv2.imwrite(self.out_dir + str(self.num) + "-" + str(self.num - 1) + '.jpg', obj_img)
+
                 # x,y centerデータの作成
                 # self.out_txt(center_x, center_y, obj_img_path)
 
