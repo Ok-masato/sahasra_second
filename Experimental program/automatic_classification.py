@@ -43,30 +43,33 @@ class AutomaticClassification:
         self.img_paths = []
         self.img_num = 0
 
+    # イメージを読み込む
     def import_img(self):
-        np.random.seed(5)
+        np.random.seed(5)   # 乱数を生成する
         for root, dirs, files in os.walk(self.target):
             for file in files:
-                if file.endswith(".jpg"):
-                    self.img_paths.append(os.path.join(root, file))
+                if file.endswith(".jpg"):   # jpgファイルだった場合
+                    self.img_paths.append(os.path.join(root, file))     # img_pathsの末尾にパスを追加
         print(self.img_paths)
-        self.img_num = len(self.img_paths)
-        print("Image number:", self.img_num)
+        self.img_num = len(self.img_paths)  # img_numにimg_pathsの長さ（画像の枚数）を渡す
+        print("Image number:", self.img_num)    # 画像の枚数を表示
         print("Image list make done.")
 
+    # 分類の開始
     def start_classification(self):
         X = []
-        pb = ProgressBar(max_value=len(self.img_paths))
+        pb = ProgressBar(max_value=len(self.img_paths))    # プログレスバー
         for i in range(len(self.img_paths)):
             # Extract image features
-            feat = self.__feature_extraction(self.img_paths[i])
-            X.append(feat)
-            pb.update(i)
+            feat = self.__feature_extraction(self.img_paths[i])     # イメージから抽出した特徴をfeatに格納
+            X.append(feat)  # リストXにfeatを格納
+            pb.update(i)    # プログレスバーのアップデート
 
-        # Clutering images by k-means++
+        # k-means++による画像のクラスタリング
         X = np.array(X)
         self.x_means(X)
 
+    # 特徴の抽出
     def __feature_extraction(self, img_path):
         img = image.load_img(img_path, target_size=(224, 224))  # resize
 
@@ -74,11 +77,11 @@ class AutomaticClassification:
         _img = Image.open(img_path)
         w, h = _img.size
 
-        x = image.img_to_array(img)
-        x = np.expand_dims(x, axis=0)  # add a dimention of samples
-        x = preprocess_input(x)  # RGB 2 BGR and zero-centering by mean pixel based on the position of channels
-        feat = self.model.predict(x)  # Get image features
-        feat = feat.flatten()  # Convert 3-dimentional matrix to (1, n) array
+        x = image.img_to_array(img)     # PIL 形式から ndarray に変換する img: PIL形式の画像
+        x = np.expand_dims(x, axis=0)  # 新たな次元を追加 第一引数x:元のndarray, 第二引数axxis: 次元を追加する位置を指定
+        x = preprocess_input(x)  # 画像の前処理　平均ピクセルによるゼロセンタリング
+        feat = self.model.predict(x)  # imageの特徴を取得
+        feat = feat.flatten()  # 3次元の行列を(1, n)配列に変換する
         feat = self.add_feature(feat, h, w)
         return feat
 
@@ -129,7 +132,6 @@ if __name__ == "__main__":
 
     # 分類対象のフォルダ
     target = "./target"
-    # 無い場合はとってくる
 
     # 分類クラスのフォルダ名
     result_folder = "/class_"
@@ -151,14 +153,14 @@ if __name__ == "__main__":
 
     result_path = ex_path + "/" + "result.txt"
 
-    for i in range(ex_num):
-        if i == 0:
+    for i in range(ex_num):     # 指定した実験回数だけ繰り返す
+        if i == 0:  # 初期の処理
             ac = AutomaticClassification(target, output_path, result_folder, model_name)
             # shutil.copytree("../obj_db/target", "./target")
         else:
             ac.update_paramater(target, output_path, result_folder)
-        ac.import_img()
-        ac.start_classification()
+        ac.import_img()     # イメージの読み込み
+        ac.start_classification()   # 分類の開始
 
         # ディレクトリ作成
         new_dir = ex_path + "/実験_{}/".format(str(i + 1).zfill(4))
